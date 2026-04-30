@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>原型网络小样本学习可视化</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f8f9fc;
+      color: #2c3e50;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ========== 左侧训练面板 ========== */
+    .left-panel {
+      width: 480px;
+      background: white;
+      border-right: 1px solid #eef0f5;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 32px 28px;
+    }
+
+    .left-panel h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      letter-spacing: -0.3px;
+      color: #1a1a2e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .train-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #bdc3c7;
+      transition: background 0.3s;
+    }
+    .status-indicator.running {
+      background: #27ae60;
+    }
+    .status-indicator.done {
+      background: #3498db;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: #2c3e50;
+      color: white;
+    }
+    .btn-primary:hover { background: #1e2b38; }
+    .btn-primary:disabled { background: #bdc3c7; cursor: not-allowed; }
+
+    .chart-box {
+      background: #fafbfc;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 16px 0;
+      border: 1px solid #edf0f5;
+    }
+    .chart-box canvas {
+      max-height: 180px;
+    }
+
+    .test-result-mini {
+      background: #f4f9f4;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.95rem;
+      color: #2d6a4f;
+      margin-top: 8px;
+    }
+
+    /* ========== 右侧测试面板 ========== */
+    .right-panel {
+      flex: 1;
+      background: #f8f9fc;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 32px 36px;
+    }
+
+    .right-panel h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #1a1a2e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-subtitle {
+      color: #7f8c8d;
+      margin-bottom: 24px;
+      font-size: 0.9rem;
+    }
+
+    .class-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .class-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid #eef0f5;
+      min-width: 260px;
+      flex: 1;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+      transition: all 0.2s;
+    }
+    .class-card:hover {
+      border-color: #d0d5e0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .card-header input {
+      border: 1px solid #e0e4ea;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      width: 130px;
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #95a5a6;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .btn-icon:hover { background: #f0f0f0; color: #e74c3c; }
+
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: white;
+      border: 1px dashed #b0b8c5;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      color: #555;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-bottom: 12px;
+    }
+    .upload-btn:hover { border-color: #2c3e50; color: #2c3e50; }
+    .upload-btn input[type="file"] { display: none; }
+
+    .preview-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .preview-item {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e0e4ea;
+      background: white;
+    }
+    .preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .preview-item .remove-btn {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: rgba(231,76,60,0.85);
+      border: none;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      color: white;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .query-section {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 20px 0;
+      border: 1px solid #eef0f5;
+    }
+
+    .predict-btn {
+      background: #2c3e50;
+      color: white;
+      padding: 12px 28px;
+      border-radius: 10px;
+      margin-top: 12px;
+      font-weight: 500;
+    }
+
+    .results-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 20px;
+      border: 1px solid #eef0f5;
+    }
+
+    .result-class {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f3f7;
+    }
+    .result-class:last-child { border-bottom: none; }
+
+    .result-class .class-name {
+      font-weight: 600;
+      min-width: 100px;
+    }
+    .result-class .metrics {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 0.9rem;
+    }
+    .metric-dist { color: #7f8c8d; }
+    .metric-conf { color: #2c3e50; font-weight: 500; }
+
+    .conf-bar-bg {
+      width: 120px;
+      height: 6px;
+      background: #ecf0f1;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .conf-bar-fill {
+      height: 100%;
+      background: #2c3e50;
+      border-radius: 4px;
+    }
+
+    .highlight-card {
+      box-shadow: 0 0 0 2px #27ae60;
+    }
+
+    /* 响应式基础调整 */
+    @media (max-width: 900px) {
+      .app { flex-direction: column; }
+      .left-panel { width: 100%; max-height: 60vh; }
+    }
+  </style>
+</head>
+<h1>qcy_ml_task</h1>
+<body>
+  <div class="app">
+    <!-- ========== 左侧训练区 ========== -->
+    <div class="left-panel">
+      <h2>📊 模型训练</h2>
+      <div class="train-status">
+        <span class="status-indicator" id="statusDot"></span>
+        <span id="statusText" style="font-size:0.9rem;">未开始</span>
+      </div>
+
+      {% if data_loaded %}
+        <button class="btn btn-primary" id="startTrainBtn">▶ 开始训练</button>
+      {% else %}
+        <p style="color:#e74c3c; font-size:0.9rem;">⚠️ 数据集未找到</p>
+      {% endif %}
+
+      <div class="chart-box" style="margin-top:20px;">
+        <p style="font-weight:500; font-size:0.85rem; margin-bottom:8px;">损失曲线</p>
+        <canvas id="lossChart" height="150"></canvas>
+      </div>
+      <div class="chart-box">
+        <p style="font-weight:500; font-size:0.85rem; margin-bottom:8px;">准确率曲线</p>
+        <canvas id="accChart" height="150"></canvas>
+      </div>
+
+      <div id="testResultMini" class="test-result-mini hidden">
+        ✅ 测试准确率：<span id="testAccValMini"></span>
+      </div>
+    </div>
+
+    <!-- ========== 右侧测试区 ========== -->
+    <div class="right-panel">
+      <h2>🔍 单张图片小样本测试</h2>
+      <p class="section-subtitle">上传各类别的支持图片（每类1~5张），再选择查询图片进行推理</p>
+
+      <div id="classContainer" class="class-list">
+        <!-- 动态渲染类别卡片 -->
+      </div>
+      <button class="btn" style="background:white; border:1px solid #d0d5e0; color:#555;" id="addClassBtn">＋ 添加类别</button>
+
+      <div class="query-section">
+        <p style="font-weight:500; margin-bottom:10px;">查询图片</p>
+        <label class="upload-btn">
+          📷 选择图片
+          <input type="file" id="queryImg" accept="image/*">
+        </label>
+        <div id="queryPreview" class="preview-grid"></div>
+        <button class="btn predict-btn" id="predictBtn">🔮 开始预测</button>
+      </div>
+
+      <div id="predictResult" class="results-card hidden">
+        <h3 style="margin-bottom:12px;">预测结果：<span id="predName" style="color:#2c3e50;"></span></h3>
+        <div id="distList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ================== 状态管理 ==================
+    let supportFiles = [[], []];
+    let classCount = 2;
+
+    function initDefaultClasses() {
+      supportFiles = [[], []];
+      classCount = 2;
+      renderClassCards();
+    }
+
+    function renderClassCards() {
+      const container = document.getElementById('classContainer');
+      container.innerHTML = '';
+
+      for (let i = 0; i < classCount; i++) {
+        const files = supportFiles[i] || [];
+        const card = document.createElement('div');
+        card.className = 'class-card';
+        card.dataset.index = i;
+
+        card.innerHTML = `
+          <div class="card-header">
+            <input type="text" class="class-name-input" value="class_${i}" placeholder="类别名称">
+            <button class="btn-icon delete-class-btn" title="删除类别">🗑️</button>
+          </div>
+          <label class="upload-btn">
+            📁 选择支持图片
+            <input type="file" class="support-input" multiple accept="image/*">
+          </label>
+          <div style="font-size:0.8rem; color:#888;">已选 ${files.length} 张</div>
+          <div class="preview-grid" id="preview_${i}"></div>
+        `;
+
+        // 删除类别
+        card.querySelector('.delete-class-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (classCount <= 2) {
+            alert('至少需要保留两个类别');
+            return;
+          }
+          supportFiles.splice(i, 1);
+          classCount--;
+          renderClassCards();
+        });
+
+        // 文件选择
+        const fileInput = card.querySelector('.support-input');
+        fileInput.addEventListener('change', (e) => {
+          handleFileSelect(i, e.target.files);
+          fileInput.value = ''; // 允许重复选择同一文件
+        });
+
+        container.appendChild(card);
+        renderPreviews(i, files);
+      }
+    }
+
+    function handleFileSelect(classIdx, fileList) {
+      if (!fileList || fileList.length === 0) return;
+      const current = supportFiles[classIdx] || [];
+      for (let f of fileList) {
+        current.push(f);
+      }
+      supportFiles[classIdx] = current;
+      renderPreviews(classIdx, current);
+      // 更新计数
+      const card = document.querySelector(`.class-card[data-index="${classIdx}"]`);
+      if (card) {
+        const countDiv = card.querySelector('div[style*="font-size:0.8rem"]');
+        if (countDiv) countDiv.textContent = `已选 ${current.length} 张`;
+      }
+    }
+
+    function removeImage(classIdx, fileIdx) {
+      const files = supportFiles[classIdx] || [];
+      files.splice(fileIdx, 1);
+      renderPreviews(classIdx, files);
+      const card = document.querySelector(`.class-card[data-index="${classIdx}"]`);
+      if (card) {
+        const countDiv = card.querySelector('div[style*="font-size:0.8rem"]');
+        if (countDiv) countDiv.textContent = `已选 ${files.length} 张`;
+      }
+    }
+
+    function renderPreviews(classIdx, files) {
+      const previewDiv = document.getElementById(`preview_${classIdx}`);
+      if (!previewDiv) return;
+      previewDiv.innerHTML = '';
+      files.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const div = document.createElement('div');
+          div.className = 'preview-item';
+          div.innerHTML = `
+            <img src="${e.target.result}">
+            <button class="remove-btn">✕</button>
+          `;
+          div.querySelector('.remove-btn').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            removeImage(classIdx, idx);
+          });
+          previewDiv.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById('addClassBtn').addEventListener('click', () => {
+      supportFiles.push([]);
+      classCount++;
+      renderClassCards();
+    });
+
+    // 查询图片预览
+    document.getElementById('queryImg').addEventListener('change', function(e) {
+      const preview = document.getElementById('queryPreview');
+      preview.innerHTML = '';
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const div = document.createElement('div');
+        div.className = 'preview-item';
+        div.innerHTML = `<img src="${ev.target.result}">`;
+        preview.appendChild(div);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ================== 训练 SSE 图表 ==================
+    const lossCtx = document.getElementById('lossChart').getContext('2d');
+    const accCtx = document.getElementById('accChart').getContext('2d');
+
+    const lossChart = new Chart(lossCtx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'Loss', data: [], borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.05)', fill: true, tension: 0.2, pointRadius: 2 }]
+      },
+      options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } }
+    });
+    const accChart = new Chart(accCtx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'Accuracy', data: [], borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.05)', fill: true, tension: 0.2, pointRadius: 2 }]
+      },
+      options: { responsive: true, maintainAspectRatio: true, scales: { y: { min: 0, max: 1 } } }
+    });
+
+    let eventSource = null;
+    document.getElementById('startTrainBtn')?.addEventListener('click', async () => {
+      const res = await fetch('/start_train', { method: 'POST' });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      document.getElementById('statusDot').className = 'status-indicator running';
+      document.getElementById('statusText').innerText = '训练中...';
+      document.getElementById('testResultMini').classList.add('hidden');
+
+      lossChart.data.labels = [];
+      lossChart.data.datasets[0].data = [];
+      accChart.data.labels = [];
+      accChart.data.datasets[0].data = [];
+      lossChart.update(); accChart.update();
+
+      if (eventSource) eventSource.close();
+      eventSource = new EventSource('/progress');
+      eventSource.onmessage = (e) => {
+        const d = JSON.parse(e.data);
+        if (d.running) {
+          document.getElementById('statusText').innerText = `训练中 Epoch ${d.epoch}/${d.max_epochs}`;
+          if (lossChart.data.labels.length < d.epoch) {
+            lossChart.data.labels.push(d.epoch);
+            lossChart.data.datasets[0].data.push(d.loss);
+            accChart.data.labels.push(d.epoch);
+            accChart.data.datasets[0].data.push(d.acc);
+            lossChart.update(); accChart.update();
+          }
+        }
+        if (d.test_result !== null) {
+          document.getElementById('statusDot').className = 'status-indicator done';
+          document.getElementById('statusText').innerText = '训练完成';
+          document.getElementById('testResultMini').classList.remove('hidden');
+          document.getElementById('testAccValMini').innerText = (d.test_result * 100).toFixed(2) + '%';
+          eventSource.close();
+        }
+      };
+    });
+
+    // ================== 单样本预测 ==================
+    document.getElementById('predictBtn').addEventListener('click', async () => {
+      const formData = new FormData();
+      const classNames = [];
+      let hasError = false;
+
+      for (let i = 0; i < classCount; i++) {
+        const card = document.querySelector(`.class-card[data-index="${i}"]`);
+        if (!card) continue;
+        const nameInput = card.querySelector('.class-name-input');
+        const name = nameInput ? nameInput.value.trim() : `class_${i}`;
+        if (!name) {
+          alert(`类别 ${i} 名称不能为空`);
+          hasError = true; break;
+        }
+        classNames.push(name);
+        const files = supportFiles[i] || [];
+        if (files.length === 0) {
+          alert(`类别 "${name}" 没有支持图片`);
+          hasError = true; break;
+        }
+        files.forEach(file => formData.append(`class_${i}_img`, file));
+        formData.append('class_names', name);
+      }
+      if (hasError) return;
+
+      const queryFile = document.getElementById('queryImg').files[0];
+      if (!queryFile) {
+        alert('请选择查询图片');
+        return;
+      }
+      formData.append('query_img', queryFile);
+
+      const res = await fetch('/single_test', { method: 'POST', body: formData });
+      const json = await res.json();
+      if (json.error) { alert(json.error); return; }
+
+      document.getElementById('predictResult').classList.remove('hidden');
+      document.getElementById('predName').innerText = json.prediction;
+
+      const distances = json.distances;
+      const entries = Object.entries(distances);
+      const expVals = entries.map(([_, d]) => Math.exp(-d));
+      const sumExp = expVals.reduce((a,b) => a+b, 0);
+
+      const distListDiv = document.getElementById('distList');
+      distListDiv.innerHTML = '';
+
+      entries.forEach(([cls, dist], idx) => {
+        const prob = expVals[idx] / sumExp;
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'result-class';
+        if (cls === json.prediction) itemDiv.classList.add('highlight-card');
+
+        itemDiv.innerHTML = `
+          <span class="class-name">${cls}</span>
+          <div class="metrics">
+            <span class="metric-dist">距离 ${dist.toFixed(4)}</span>
+            <span class="metric-conf">置信度 ${(prob*100).toFixed(1)}%</span>
+            <div class="conf-bar-bg">
+              <div class="conf-bar-fill" style="width: ${(prob*100).toFixed(1)}%;"></div>
+            </div>
+          </div>
+        `;
+        distListDiv.appendChild(itemDiv);
+      });
+    });
+
+    // 初始化
+    initDefaultClasses();
+  </script>
+</body>
+</html>

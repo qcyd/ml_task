@@ -1,0 +1,33 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# IDE 配置（你现在的 .idea 就是这个）
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 数据集、大文件、模型
+*.pth
+*.pt
+*.h5
+*.keras
+*.zip
+*.tar
+*.rar
+*.exe
+
+# 日志
+logs/
+*.log
+
+data/
+
+acrossdomain/data

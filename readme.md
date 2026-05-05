@@ -1,4 +1,4 @@
-# 原型网络小样本学习系统 (Prototypical Network for Few-Shot Learning)
+跨域小样本手写识别算法研究
 
 基于 PyTorch 实现的原型网络小样本学习系统，支持训练可视化和交互式测试。
 
@@ -12,13 +12,9 @@
 - **交互式测试**：上传支持集和查询图片进行推理
 - **距离度量**：展示各类别与查询图片的距离和置信度
 
-## 环境要求
+  1.安装依赖
+  训练：运行acrossdomain/net_across_train.py
+  可视化：运行acrossdomain/app.py
+  
 
-- Python 3.8+
-- PyTorch 1.10+
-- CUDA 11.0+（推荐使用GPU加速）
-
-## 快速开始
-
-### 安装依赖
 
